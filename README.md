@@ -10,18 +10,19 @@ GPU or display, and can show the model in a live viewer that rebuilds on save.
 ## Install
 
 ```sh
-uv tool install "brepy[viewer] @ git+https://github.com/brhelwig-dev/brepy"
+uv tool install "brepy[viewer]"
 ```
 
 The `viewer` extra adds `--view` and `--watch`. Leave it out on headless
 machines. OCP needs the system library `libGL.so.1` (Debian: `libgl1`).
+Releases are published to [PyPI](https://pypi.org/project/brepy/).
 
 A container image with `brepy`, pytest, ruff and ty preinstalled is published
 as `ghcr.io/brhelwig-dev/brepy:<version>` for each release, and as `:latest`,
 rebuilt from `main` on every push and nightly:
 
 ```sh
-docker run --rm -v "$PWD:/work" -w /work ghcr.io/brhelwig-dev/brepy:0.1.1 \
+docker run --rm -v "$PWD:/work" -w /work ghcr.io/brhelwig-dev/brepy:0.1.2 \
     brepy -f step models/bracket/bracket.py
 ```
 
