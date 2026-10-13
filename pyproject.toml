@@ -1,0 +1,53 @@
+[project]
+name = "brepy"
+version = "0.1.1"
+description = "Build, export and preview build123d model scripts"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Brandon Helwig" }]
+requires-python = ">=3.12"
+dependencies = [
+    "build123d>=0.13",
+    "numpy>=2",
+    "pillow>=11",
+]
+
+[project.optional-dependencies]
+viewer = [
+    "ocp-viewer>=1.1",
+    "pywebview>=6",
+]
+
+[project.scripts]
+brepy = "brepy.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "ruff==0.16.10",
+    "ty==0.0.84",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+extend-exclude = ["tests/fixtures"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.ty.analysis]
+allowed-unresolved-imports = ["OCP.**"]
+
+[tool.ty.src]
+exclude = ["tests/fixtures"]
