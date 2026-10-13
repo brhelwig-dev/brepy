@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  workflow_dispatch: {}
+
+concurrency: release
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - name: Clone
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          git init -q .
+          git -c http.extraHeader="Authorization: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" \
+            fetch -q --depth 1 "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" refs/heads/main
+          git checkout -q FETCH_HEAD
+
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+
+      # YY.DOY.MMMM in UTC: year, day of the year, minute of the day. Not zero-padded,
+      # since PEP 440 drops leading zeros and the tag must equal the package version.
+      - name: Tag the release
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          set -- $(date -u '+%y %j %H %M')
+          version="$((10#$1)).$((10#$2)).$((10#$3 * 60 + 10#$4))"
+          auth="Authorization: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)"
+          remote="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          if git -c http.extraHeader="$auth" ls-remote --exit-code --tags "$remote" "refs/tags/v$version" >/dev/null; then
+            echo "::error::v$version already exists; run the release again next minute"
+            exit 1
+          fi
+          uv version "$version" --no-sync
+          git -c user.name="github-actions[bot]" \
+            -c user.email="41898783+github-actions[bot]@users.noreply.github.com" \
+            commit -q -am "Release $version"
+          git -c http.extraHeader="$auth" push -q --atomic "$remote" HEAD:refs/heads/main "HEAD:refs/tags/v$version"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      # A tag pushed with GITHUB_TOKEN starts no workflows, but a dispatch does. CI on the
+      # tag runs the checks, then publishes to PyPI and ghcr.
+      - name: Create the GitHub release and start CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create "v$VERSION" --verify-tag --generate-notes --title "v$VERSION"
+          gh workflow run ci.yml --ref "v$VERSION"
