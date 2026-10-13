@@ -22,7 +22,7 @@ as `ghcr.io/brhelwig-dev/brepy:<version>` for each release, and as `:latest`,
 rebuilt from `main` on every push and nightly:
 
 ```sh
-docker run --rm -v "$PWD:/work" -w /work ghcr.io/brhelwig-dev/brepy:0.1.2 \
+docker run --rm -v "$PWD:/work" -w /work ghcr.io/brhelwig-dev/brepy:latest \
     brepy -f step models/bracket/bracket.py
 ```
 
@@ -134,6 +134,11 @@ uv run pytest
 uv run ruff check && uv run ruff format --check
 uv run ty check
 ```
+
+To release, run the **Release** workflow from the Actions tab. It versions the
+release `YY.DOY.MMMM` (UTC year, day of the year, minute of the day, e.g.
+`26.287.570`), commits and tags it on `main`, and publishes it to PyPI and
+ghcr.
 
 ## License
 
