@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 
 [[package]]
@@ -44,7 +44,7 @@ wheels = [
 
 [[package]]
 name = "brepy"
-version = "0.1.2"
+version = "26.286.1409"
 source = { editable = "." }
 dependencies = [
     { name = "build123d" },
