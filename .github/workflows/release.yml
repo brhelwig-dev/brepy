@@ -9,11 +9,40 @@ permissions:
   contents: read
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          git init -q .
+          git -c http.extraHeader="Authorization: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" \
+            fetch -q --depth 1 "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" "$GITHUB_REF"
+          git checkout -q FETCH_HEAD
+
+      - name: Install OCP's system libraries
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends libgl1 libglib2.0-0
+
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+
+      - name: Check
+        run: |
+          uv sync --locked --all-extras
+          uv run ruff check
+          uv run ruff format --check
+          uv run ty check
+          uv run pytest -q
+
   release:
+    needs: check
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      actions: write
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
     steps:
       - name: Clone
         env:
@@ -29,6 +58,7 @@ jobs:
       # YY.DOY.MMMM in UTC: year, day of the year, minute of the day. Not zero-padded,
       # since PEP 440 drops leading zeros and the tag must equal the package version.
       - name: Tag the release
+        id: tag
         env:
           TOKEN: ${{ github.token }}
         run: |
@@ -46,13 +76,65 @@ jobs:
             commit -q -am "Release $version"
           git -c http.extraHeader="$auth" push -q --atomic "$remote" HEAD:refs/heads/main "HEAD:refs/tags/v$version"
           echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      # A tag pushed with GITHUB_TOKEN starts no workflows, but a dispatch does. CI on the
-      # tag runs the checks, then publishes to PyPI and ghcr.
-      - name: Create the GitHub release and start CI
+      - name: Create the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+        run: gh release create "v$VERSION" --verify-tag --generate-notes --title "v$VERSION"
+
+  dist:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone
+        env:
+          TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.release.outputs.version }}
         run: |
-          gh release create "v$VERSION" --verify-tag --generate-notes --title "v$VERSION"
-          gh workflow run ci.yml --ref "v$VERSION"
+          git init -q .
+          git -c http.extraHeader="Authorization: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" \
+            fetch -q --depth 1 "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" "refs/tags/v$VERSION"
+          git checkout -q FETCH_HEAD
+
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+
+      - name: Build
+        run: uv build --no-sources
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 1
+
+  pypi:
+    needs: dist
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/brepy/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist
+
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+
+      - name: Publish with trusted publishing
+        run: uv publish --trusted-publishing always
+
+  image:
+    needs: release
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/image.yml
+    with:
+      ref: refs/tags/v${{ needs.release.outputs.version }}
+      tag: ${{ needs.release.outputs.version }}
