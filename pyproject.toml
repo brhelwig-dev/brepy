@@ -1,6 +1,6 @@
 [project]
 name = "brepy"
-version = "26.292.1014"
+version = "26.292.1090"
 description = "Build, export and preview build123d model scripts"
 readme = "README.md"
 license = "MIT"
