@@ -33,14 +33,7 @@ def unsupported_triangles(
         meshes = []
         for face in solid.faces():
             if face.area > sheets.SLIVER_AREA:
-                vertices, triangles = face.tessellate(sheets.TESS_TOL)
-                meshes.append(
-                    (
-                        face,
-                        np.array([tuple(v) for v in vertices]),
-                        np.array(triangles, dtype=np.int64),
-                    )
-                )
+                meshes.append((face, *sheets.face_mesh(face)))
         floor = min((v @ up).min() for _, v, t in meshes if len(t))
         for face, vertices, triangles in meshes:
             if not len(triangles):

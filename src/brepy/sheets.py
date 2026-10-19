@@ -24,12 +24,14 @@ from typing import Any, Final
 
 import numpy as np
 import numpy.typing as npt
-from build123d import Compound, Pos, Shape, Solid
+from build123d import Compound, Face, Pos, Shape, Solid
+from OCP.BRep import BRep_Tool
 from OCP.BRepAdaptor import BRepAdaptor_Curve
 from OCP.BRepClass3d import BRepClass3d_SolidClassifier
 from OCP.GCPnts import GCPnts_QuasiUniformDeflection
 from OCP.gp import gp_Pnt
-from OCP.TopAbs import TopAbs_State
+from OCP.TopAbs import TopAbs_Orientation, TopAbs_State
+from OCP.TopLoc import TopLoc_Location
 from PIL import Image, ImageDraw, ImageFont
 
 Array = npt.NDArray[np.float64]
@@ -112,11 +114,9 @@ def tessellate(shape: Shape[Any], build_up: Sequence[float] | None) -> tuple[lis
         for face in solid.faces():
             if face.area < SLIVER_AREA:
                 continue
-            vs, ts = face.tessellate(TESS_TOL)
-            if ts:
-                meshes.append(
-                    (face, np.array([tuple(v) for v in vs]), np.array(ts, dtype=np.int64))
-                )
+            vs, ts = face_mesh(face)
+            if len(ts):
+                meshes.append((face, vs, ts))
         if not meshes:
             continue
         floor = min((v @ up).min() for _, v, _ in meshes) if up is not None else 0.0
@@ -132,6 +132,27 @@ def tessellate(shape: Shape[Any], build_up: Sequence[float] | None) -> tuple[lis
             base += len(v)
         groups.append((np.vstack(verts), np.vstack(tris), np.concatenate(down)))
     return groups, flagged
+
+
+def face_mesh(face: Face) -> tuple[Array, Ints]:
+    """The face's vertices and triangles, as face.tessellate(TESS_TOL) gives them."""
+    face.mesh(TESS_TOL)
+    loc = TopLoc_Location()
+    poly = BRep_Tool.Triangulation_s(face.wrapped, loc)
+    if poly is None:
+        return np.empty((0, 3)), np.empty((0, 3), dtype=np.int64)
+    nodes = (poly.Node(i) for i in range(1, poly.NbNodes() + 1))
+    if not loc.IsIdentity():
+        trsf = loc.Transformation()
+        nodes = (p.Transformed(trsf) for p in nodes)
+    verts = np.array([(p.X(), p.Y(), p.Z()) for p in nodes]).reshape(-1, 3)
+    order = (
+        (1, 3, 2) if face.wrapped.Orientation() == TopAbs_Orientation.TopAbs_REVERSED else (1, 2, 3)
+    )
+    tris = np.array(
+        [tuple(t.Value(k) - 1 for k in order) for t in poly.Triangles()], dtype=np.int64
+    ).reshape(-1, 3)
+    return verts, tris
 
 
 def plate_ward(verts: Array, tris: Any, classifier: Any, up: Array | None) -> npt.NDArray[np.bool_]:
