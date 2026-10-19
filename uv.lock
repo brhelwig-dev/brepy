@@ -44,7 +44,7 @@ wheels = [
 
 [[package]]
 name = "brepy"
-version = "26.286.1409"
+version = "26.292.1014"
 source = { editable = "." }
 dependencies = [
     { name = "build123d" },
