@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:0.13.0-python3.14-trixie-slim@sha256:8e70ac2e85d09a5bb7ef09753b80671a60a71c8d24f195e4890d71e03865e36d
+FROM ghcr.io/astral-sh/uv:0.13.3-python3.14-trixie-slim@sha256:02f7e4ef3aeb9e5bf2c4ab7476b622c9ec9bfe62c9ded95074d82f99c50c1471
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl git libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
