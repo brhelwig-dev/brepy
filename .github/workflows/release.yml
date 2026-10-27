@@ -26,7 +26,7 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y -q --no-install-recommends libgl1 libglib2.0-0
 
-      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
 
       - name: Check
         run: |
@@ -53,7 +53,7 @@ jobs:
             fetch -q --depth 1 "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" refs/heads/main
           git checkout -q FETCH_HEAD
 
-      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
 
       # YY.DOY.MMMM in UTC: year, day of the year, minute of the day. Not zero-padded,
       # since PEP 440 drops leading zeros and the tag must equal the package version.
@@ -98,7 +98,7 @@ jobs:
             fetch -q --depth 1 "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" "refs/tags/v$VERSION"
           git checkout -q FETCH_HEAD
 
-      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
 
       - name: Build
         run: uv build --no-sources
@@ -124,7 +124,7 @@ jobs:
           name: dist
           path: dist
 
-      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
 
       - name: Publish with trusted publishing
         run: uv publish --trusted-publishing always
